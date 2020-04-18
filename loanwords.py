@@ -117,23 +117,21 @@ def pmi(entries, min_langs=3, per_donor=False, out_file='out/nmpi.tsv'):
             p_xy = len(intersection) / n_langs
             pmi = math.log(p_xy / (p_x * p_y))
             h_xy = -math.log(p_xy)
-            npmi.append((x, y, pmi / h_xy, borrowed[x], borrowed[y],
-                        intersection))
-    npmi.sort(key=lambda x: (x[2], len(x[5])), reverse=True)
+            npmi.append((x, y, pmi / h_xy, p_x, intersection))
+    npmi.sort(key=lambda x: (x[2], x[3], len(x[4])), reverse=True)
     print(npmi[0])
     if out_file:
         with open(out_file, 'w', encoding='utf8') as f:
-            f.write('Concept 1\tConcept 2\tNormalized PMI\tLanguages\n')
+            f.write('Concept X\tConcept Y\tNormalized PMI\tBorrowability X\t'
+                    'Languages\n')
             for entry in npmi:
-                f.write('{}\t{}\t{:.6f}\t{}\n'.format(entry[0], entry[1],
-                                                      entry[2], entry[5]))
+                f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
+    return npmi, n_langs
 
 
-def implications(entries, min_langs=3, per_donor=False, category_level=False,
+def implications(entries, n_langs, min_langs=3, per_donor=False,
                  out_file='out/implications.tsv'):
     # "If a language borrowed X, it also borrowed Y."
-    # Category-level: "If a language borrowed X, it also borrowed other words
-    #                  belonging to the same semantic field"
     assert min_langs > 0
     borrowed = {}
     for entry in entries.values():
@@ -154,19 +152,20 @@ def implications(entries, min_langs=3, per_donor=False, category_level=False,
             if len(intersection) < min_langs:
                 continue
             strength = len(intersection) / len(borrowed[x])
-            implications.append((x, y, strength, borrowed[x], borrowed[y],
+            borrowability_x = len(borrowed[x]) / n_langs
+            implications.append((x, y, strength, borrowability_x,
                                  intersection))
-    implications.sort(key=lambda x: (x[2], len(x[5])), reverse=True)
+    implications.sort(key=lambda x: (x[2], x[3], len(x[4])), reverse=True)
     print(implications[0])
     if out_file:
         with open(out_file, 'w', encoding='utf8') as f:
-            f.write('Concept 1\tConcept 2\tImplication strength\tLanguages\n')
+            f.write('Concept X\tConcept Y\tImplication strength\t'
+                    'Borrowability X\tLanguages\n')
             for entry in implications:
-                f.write('{}\t{}\t{:.6f}\t{}\n'.format(entry[0], entry[1],
-                                                      entry[2], entry[5]))
+                f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
 
 
-def implications_by_field(entries, min_langs=3, per_donor=False,
+def implications_by_field(entries, n_langs, min_langs=3, per_donor=False,
                           out_file='out/implications_field.tsv'):
     # "If a language borrowed X, it also borrowed other words
     #  belonging to the same semantic field"
@@ -205,24 +204,26 @@ def implications_by_field(entries, min_langs=3, per_donor=False,
                 continue
         strength /= len(langs)
         strength /= field2size[field]
-        implications.append((x, field, strength, langs))
-    implications.sort(key=lambda x: (x[2], len(x[3])), reverse=True)
+        borrowability = len(langs) / n_langs
+        implications.append((x, field, strength, borrowability, langs))
+    implications.sort(key=lambda x: (x[2], x[3], len(x[4])), reverse=True)
     print(implications[0])
     if out_file:
         with open(out_file, 'w', encoding='utf8') as f:
-            f.write('Concept\tField\tImplication strength\tLanguages\n')
+            f.write('Concept\tField\tImplication strength\t'
+                    'Borrowability of concept\tLanguages\n')
             for entry in implications:
-                f.write('{}\t{}\t{:.6f}\t{}\n'.format(*entry))
+                f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
 
 
 entries = get_loanwords()
-# pmi(entries)
-# pmi(entries, per_donor=True, out_file='out/npmi_per_donor.tsv')
-# implications(entries)
-# implications(entries, per_donor=True,
-#              out_file='out/implications_per_donor.tsv')
-implications_by_field(entries)
-implications_by_field(entries, per_donor=True,
+_, n_langs = pmi(entries)
+pmi(entries, per_donor=True, out_file='out/npmi_per_donor.tsv')
+implications(entries, n_langs)
+implications(entries, n_langs, per_donor=True,
+             out_file='out/implications_per_donor.tsv')
+implications_by_field(entries, n_langs)
+implications_by_field(entries, n_langs, per_donor=True,
                       out_file='out/implications_field_per_donor.tsv')
 
 # TODO: things to consider analysing
