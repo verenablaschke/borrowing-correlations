@@ -24,7 +24,20 @@ def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
         for line in f:
             if line.startswith('ID,'):
                 continue
-            cells = line.split(',')
+            if ('"') in line:
+                cells = []
+                line = line.replace('""', "'")
+                for i, quote_cell in enumerate(line.split('"')):
+                    if i % 2 == 0:
+                        if quote_cell[-1] == ',':
+                            quote_cell = quote_cell[:-1]
+                        if quote_cell[0] == ',':
+                            quote_cell = quote_cell[1:]
+                        cells += quote_cell.split(',')
+                    else:
+                        cells += [quote_cell]
+            else:
+                cells = line.split(',')
             entry_id = cells[key_idx]
             if to_int:
                 entry_id = int(entry_id)
@@ -62,6 +75,17 @@ def get_loanwords(lang_file='./data/languages.csv',
     print(entries['62'])
     print(entries['36856'])
     return entries
+
+
+def get_concepts(param_file='./data/parameters.csv'):
+    concept2field = get_id2string(param_file, key_idx=1, val_idx=3)
+    field2size = {}
+    for concept in concept2field:
+        try:
+            field2size[concept2field[concept]] += 1
+        except KeyError:
+            field2size[concept2field[concept]] = 1
+    return concept2field, field2size
 
 
 def pmi(entries, min_langs=3, per_donor=False, out_file='out/nmpi.tsv'):
@@ -105,9 +129,11 @@ def pmi(entries, min_langs=3, per_donor=False, out_file='out/nmpi.tsv'):
                                                       entry[2], entry[5]))
 
 
-def implications(entries, min_langs=3, per_donor=False,
+def implications(entries, min_langs=3, per_donor=False, category_level=False,
                  out_file='out/implications.tsv'):
     # "If a language borrowed X, it also borrowed Y."
+    # Category-level: "If a language borrowed X, it also borrowed other words
+    #                  belonging to the same semantic field"
     assert min_langs > 0
     borrowed = {}
     for entry in entries.values():
@@ -140,12 +166,64 @@ def implications(entries, min_langs=3, per_donor=False,
                                                       entry[2], entry[5]))
 
 
+def implications_by_field(entries, min_langs=3, per_donor=False,
+                          out_file='out/implications_field.tsv'):
+    # "If a language borrowed X, it also borrowed other words
+    #  belonging to the same semantic field"
+    assert min_langs > 0
+    concept2field, field2size = get_concepts()
+    borrowed = {}  # concept -> lang
+    borrowed_fields = {}  # lang -> field -> concept
+    for entry in entries.values():
+        if per_donor:
+            lang = entry.src_lang + ' > ' + entry.target_lang
+        else:
+            lang = entry.target_lang
+        try:
+            borrowed[entry.concept].add(lang)
+        except KeyError:
+            borrowed[entry.concept] = {lang}
+        field = concept2field[entry.concept]
+        try:
+            borrowed_fields[lang][field].add(entry.concept)
+        except KeyError:
+            try:
+                borrowed_fields[lang][field] = {entry.concept}
+            except KeyError:
+                borrowed_fields[lang] = {field: {entry.concept}}
+    implications = []
+    for x in borrowed:
+        langs = borrowed[x]
+        if len(langs) < min_langs:
+            continue
+        field = concept2field[x]
+        strength = 0
+        for lang in langs:
+            try:
+                strength += len(borrowed_fields[lang][field])
+            except KeyError:
+                continue
+        strength /= len(langs)
+        strength /= field2size[field]
+        implications.append((x, field, strength, langs))
+    implications.sort(key=lambda x: (x[2], len(x[3])), reverse=True)
+    print(implications[0])
+    if out_file:
+        with open(out_file, 'w', encoding='utf8') as f:
+            f.write('Concept\tField\tImplication strength\tLanguages\n')
+            for entry in implications:
+                f.write('{}\t{}\t{:.6f}\t{}\n'.format(*entry))
+
+
 entries = get_loanwords()
-pmi(entries)
-pmi(entries, per_donor=True, out_file='out/npmi_per_donor.tsv')
-implications(entries)
-implications(entries, per_donor=True,
-             out_file='out/implications_per_donor.tsv')
+# pmi(entries)
+# pmi(entries, per_donor=True, out_file='out/npmi_per_donor.tsv')
+# implications(entries)
+# implications(entries, per_donor=True,
+#              out_file='out/implications_per_donor.tsv')
+implications_by_field(entries)
+implications_by_field(entries, per_donor=True,
+                      out_file='out/implications_field_per_donor.tsv')
 
 # TODO: things to consider analysing
 
