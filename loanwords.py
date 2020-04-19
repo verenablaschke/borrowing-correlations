@@ -88,12 +88,42 @@ def get_concepts(param_file='./data/parameters.csv'):
     return concept2field, field2size
 
 
-def pmi(entries, min_langs=3, per_donor=False, out_file='out/nmpi.tsv'):
+def languages_by_loanword(entries, out_file='out/loanwords_to_languages.tsv'):
+    loanwords = {}
+    for entry in entries.values():
+        try:
+            loanwords[entry.concept].add(entry.src_lang + ' > ' + entry.target_lang)
+        except KeyError:
+            loanwords[entry.concept] = {entry.src_lang + ' > ' + entry.target_lang}
+    loanwords = list(loanwords.items())
+    loanwords.sort(key=lambda x: len(x[1]), reverse=True)
+    with open(out_file, 'w', encoding='utf8') as f:
+        f.write('Concept\tNumber of languages\tLanguages\n')
+        for entry in loanwords:
+            f.write('{}\t{}\t{}\n'.format(entry[0], len(entry[1]), entry[1]))
+
+
+def loan_directions(entries, out_file='out/loan_directions.tsv'):
+    loanwords = {}
+    for entry in entries.values():
+        try:
+            loanwords[entry.src_lang + ' > ' + entry.target_lang].add(entry.concept)
+        except KeyError:
+            loanwords[entry.src_lang + ' > ' + entry.target_lang] = {entry.concept}
+    loanwords = list(loanwords.items())
+    loanwords.sort(key=lambda x: len(x[1]), reverse=True)
+    with open(out_file, 'w', encoding='utf8') as f:
+        f.write('Rank\tLanguages\tNumber of concepts\tConcepts\n')
+        for rank, entry in enumerate(loanwords):
+            f.write('{}\t{}\t{}\t{}\n'.format(rank + 1, entry[0],
+                                              len(entry[1]), entry[1]))
+
+
+def pmi(entries, n_langs, min_langs=3, per_donor=False,
+        out_file='out/nmpi.tsv'):
     assert min_langs > 0
     borrowed = {}
-    langs = set()
     for entry in entries.values():
-        langs.add(entry.target_lang)
         if per_donor:
             lang = entry.src_lang + ' > ' + entry.target_lang
         else:
@@ -102,12 +132,14 @@ def pmi(entries, min_langs=3, per_donor=False, out_file='out/nmpi.tsv'):
             borrowed[entry.concept].add(lang)
         except KeyError:
             borrowed[entry.concept] = {lang}
-    n_langs = len(langs)
     npmi = []
     concepts = list(borrowed.keys())
     for i in range(len(concepts)):
         x = concepts[i]
-        for j in range(i + 1, len(concepts)):
+        # for j in range(i + 1, len(concepts)):
+        for j in range(len(concepts)):
+            if i == j:
+                continue
             y = concepts[j]
             intersection = borrowed[x].intersection(borrowed[y])
             if len(intersection) < min_langs:
@@ -217,26 +249,14 @@ def implications_by_field(entries, n_langs, min_langs=3, per_donor=False,
 
 
 entries = get_loanwords()
-_, n_langs = pmi(entries)
-pmi(entries, per_donor=True, out_file='out/npmi_per_donor.tsv')
-implications(entries, n_langs)
-implications(entries, n_langs, per_donor=True,
-             out_file='out/implications_per_donor.tsv')
-implications_by_field(entries, n_langs)
-implications_by_field(entries, n_langs, per_donor=True,
-                      out_file='out/implications_field_per_donor.tsv')
-
-# TODO: things to consider analysing
-
-# some languages have multiple words with different borrowing statuses for
-# a single concept
-
-# consider donor langs
-
-# breakdown by concept category
-
-# effect: insertion vs coexistence
-
-# age score, simplicity score
-
-# 'immediate' vs. 'earlier' borrowing for the same ID
+n_langs = 41
+# pmi(entries, n_langs)
+# pmi(entries, n_langs, per_donor=True, out_file='out/npmi_per_donor.tsv')
+# implications(entries, n_langs)
+# implications(entries, n_langs, per_donor=True,
+#              out_file='out/implications_per_donor.tsv')
+# implications_by_field(entries, n_langs)
+# implications_by_field(entries, n_langs, per_donor=True,
+#                       out_file='out/implications_field_per_donor.tsv')
+# languages_by_loanword(entries)
+loan_directions(entries)
