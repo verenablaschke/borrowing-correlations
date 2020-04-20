@@ -101,6 +101,7 @@ def languages_by_loanword(entries, out_file='out/loanwords_to_languages.tsv'):
         f.write('Concept\tNumber of languages\tLanguages\n')
         for entry in loanwords:
             f.write('{}\t{}\t{}\n'.format(entry[0], len(entry[1]), entry[1]))
+    return loanwords
 
 
 def loan_directions(entries, out_file='out/loan_directions.tsv'):
@@ -117,10 +118,11 @@ def loan_directions(entries, out_file='out/loan_directions.tsv'):
         for rank, entry in enumerate(loanwords):
             f.write('{}\t{}\t{}\t{}\n'.format(rank + 1, entry[0],
                                               len(entry[1]), entry[1]))
+    return loanwords
 
 
 def pmi(entries, n_langs, min_langs=3, per_donor=False,
-        out_file='out/nmpi.tsv'):
+        duplicates_in_output=False, out_file='out/nmpi.tsv'):
     assert min_langs > 0
     borrowed = {}
     for entry in entries.values():
@@ -136,8 +138,11 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
     concepts = list(borrowed.keys())
     for i in range(len(concepts)):
         x = concepts[i]
-        # for j in range(i + 1, len(concepts)):
-        for j in range(len(concepts)):
+        if duplicates_in_output:
+            y_range = range(len(concepts))
+        else:
+            y_range = range(i + 1, len(concepts))
+        for j in y_range:
             if i == j:
                 continue
             y = concepts[j]
@@ -158,7 +163,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
                     'Languages\n')
             for entry in npmi:
                 f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
-    return npmi, n_langs
+    return npmi
 
 
 def implications(entries, n_langs, min_langs=3, per_donor=False,
@@ -195,6 +200,7 @@ def implications(entries, n_langs, min_langs=3, per_donor=False,
                     'Borrowability X\tLanguages\n')
             for entry in implications:
                 f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
+    return implications
 
 
 def implications_by_field(entries, n_langs, min_langs=3, per_donor=False,
@@ -246,17 +252,19 @@ def implications_by_field(entries, n_langs, min_langs=3, per_donor=False,
                     'Borrowability of concept\tLanguages\n')
             for entry in implications:
                 f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
+    return implications
 
 
-entries = get_loanwords()
-n_langs = 41
-# pmi(entries, n_langs)
-# pmi(entries, n_langs, per_donor=True, out_file='out/npmi_per_donor.tsv')
-# implications(entries, n_langs)
-# implications(entries, n_langs, per_donor=True,
-#              out_file='out/implications_per_donor.tsv')
-# implications_by_field(entries, n_langs)
-# implications_by_field(entries, n_langs, per_donor=True,
-#                       out_file='out/implications_field_per_donor.tsv')
-# languages_by_loanword(entries)
-loan_directions(entries)
+if __name__ == '__main__':
+    entries = get_loanwords()
+    n_langs = 41
+    pmi(entries, n_langs)
+    pmi(entries, n_langs, per_donor=True, out_file='out/npmi_per_donor.tsv')
+    implications(entries, n_langs)
+    implications(entries, n_langs, per_donor=True,
+                 out_file='out/implications_per_donor.tsv')
+    implications_by_field(entries, n_langs)
+    implications_by_field(entries, n_langs, per_donor=True,
+                          out_file='out/implications_field_per_donor.tsv')
+    languages_by_loanword(entries)
+    loan_directions(entries)
