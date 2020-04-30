@@ -17,38 +17,98 @@ class Borrowing:
                                              self.target_lang, self.concept,
                                              self.category)
 
+    def synonym(self, target_lang, concept):
+        return self.target_lang == target_lang and self.concept == concept
 
+
+def line_gen(lines):
+    # for line in lines:
+    #     response = yield line
+    #     if response is not None:
+    #         yield "dummy"
+    #         yield response
+    gen_line = next(lines)
+    while True:
+        response = yield gen_line
+        if response:
+            gen_line = response
+            yield "dummy"
+        else:
+            gen_line = next(lines, None)
+
+
+def split_line(generator):
+    line = next(generator, None)
+    if line is None:
+        return None
+    line = line.strip()
+    if '"' in line:
+        # Some entries that are on several lines instead of one because of a
+        # line break in a comment.
+        if line.count('"') % 2 == 1:
+            while True:
+                next_line = next(generator, None)
+                if next_line is None:
+                    break
+                try:
+                    int(next_line.split(',')[0])
+                    generator.send(next_line)
+                    break
+                except ValueError:
+                    line += ' ' + next_line.strip()
+        if line.count('"') == 1:
+            return line.split(',')
+        cells = []
+        line = line.replace('""', "'")
+        for i, quote_cell in enumerate(line.split('"')):
+            if i % 2 == 0:
+                if quote_cell == '':
+                    continue
+                if quote_cell == ',':
+                    cells += ['']
+                    continue
+                if quote_cell[-1] == ',':
+                    quote_cell = quote_cell[:-1]
+                if quote_cell[0] == ',':
+                    quote_cell = quote_cell[1:]
+                cells += quote_cell.split(',')
+            else:
+                cells += [quote_cell]
+        return cells
+    else:
+        return line.split(',')
+
+
+# def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
+#     id2lang = {}
+#     with open(infile, encoding='utf8') as f:
+#         next(f)
+#         for line in f:
+#             cells = split_line(line)
+#             entry_id = cells[key_idx]
+#             if to_int:
+#                 entry_id = int(entry_id)
+#             id2lang[entry_id] = cells[val_idx]
+#     return id2lang
 def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
     id2lang = {}
     with open(infile, encoding='utf8') as f:
-        for line in f:
-            if line.startswith('ID,'):
-                continue
-            if ('"') in line:
-                cells = []
-                line = line.replace('""', "'")
-                for i, quote_cell in enumerate(line.split('"')):
-                    if i % 2 == 0:
-                        if quote_cell[-1] == ',':
-                            quote_cell = quote_cell[:-1]
-                        if quote_cell[0] == ',':
-                            quote_cell = quote_cell[1:]
-                        cells += quote_cell.split(',')
-                    else:
-                        cells += [quote_cell]
-            else:
-                cells = line.split(',')
+        generator = line_gen(f)
+        cells = split_line(generator)
+        while cells is not None:
             entry_id = cells[key_idx]
             if to_int:
                 entry_id = int(entry_id)
             id2lang[entry_id] = cells[val_idx]
+            cells = split_line(generator)
     return id2lang
 
 
 def get_loanwords(lang_file='./data/languages.csv',
                   param_file='./data/parameters.csv',
                   borrowing_file='./data/borrowings.csv',
-                  form_file='./data/forms.csv'):
+                  form_file='./data/forms.csv',
+                  discard_forms_with_inherited_counterparts=True):
     id2lang = get_id2string(lang_file)
     id2param = get_id2string(param_file)
     id2cat = get_id2string(param_file, val_idx=3)
@@ -56,25 +116,89 @@ def get_loanwords(lang_file='./data/languages.csv',
     entries = {}
     with open(borrowing_file, encoding='utf8') as f:
         next(f)
-        for line in f:
-            cells = line.strip().split(',')
+        generator = line_gen(f)
+        cells = split_line(generator)
+        while cells is not None:
             entries[cells[1]] = Borrowing(cells[1], id2lang[cells[-1]])
+            cells = split_line(generator)
+
+    if discard_forms_with_inherited_counterparts:
+        inherited_concepts = set()
 
     with open(form_file, encoding='utf8') as f:
         next(f)
-        for line in f:
-            cells = line.strip().split(',')
+        generator = line_gen(f)
+        cells = split_line(generator)
+        while cells is not None:
             try:
                 entries[cells[0]].add_values(id2lang[cells[1]],
                                              id2param[cells[2]],
                                              id2cat[cells[2]])
             except KeyError:
-                continue
+                if discard_forms_with_inherited_counterparts and cells[9] and\
+                        float(cells[9]) < 0.75:
+                    inherited_concepts.add((id2lang[cells[1]],
+                                            id2param[cells[2]]))
+            cells = split_line(generator)
 
     print("Found {} borrowings".format(len(entries)))
-    print(entries['62'])
+
+    if discard_forms_with_inherited_counterparts:
+        entries = {entry[0]: entry[1] for entry in entries.items()
+                   if (entry[1].target_lang, entry[1].concept)
+                   not in inherited_concepts}
+        print("Found {} borrowings without inherited counterparts"
+              .format(len(entries)))
+
     print(entries['36856'])
+    print(entries.get('19687', 'N/A'))
     return entries
+# def get_loanwords(lang_file='./data/languages.csv',
+#                   param_file='./data/parameters.csv',
+#                   borrowing_file='./data/borrowings.csv',
+#                   form_file='./data/forms.csv',
+#                   discard_forms_with_inherited_counterparts=True):
+#     id2lang = get_id2string(lang_file)
+#     id2param = get_id2string(param_file)
+#     id2cat = get_id2string(param_file, val_idx=3)
+
+#     entries = {}
+#     with open(borrowing_file, encoding='utf8') as f:
+#         next(f)
+#         for line in f:
+#             cells = split_line(line)
+#             entries[cells[1]] = Borrowing(cells[1], id2lang[cells[-1]])
+
+#     if discard_forms_with_inherited_counterparts:
+#         inherited_concepts = set()
+
+#     with open(form_file, encoding='utf8') as f:
+#         next(f)
+#         for line in f:
+#             cells = split_line(line)
+#             try:
+#                 entries[cells[0]].add_values(id2lang[cells[1]],
+#                                              id2param[cells[2]],
+#                                              id2cat[cells[2]])
+#             except KeyError:
+#                 print(cells)
+#                 if discard_forms_with_inherited_counterparts and\
+#                         float(cells[9]) < 0.75:
+#                     inherited_concepts.add((cells[1], cells[2]))
+#                 continue
+
+#     print("Found {} borrowings".format(len(entries)))
+
+#     if discard_forms_with_inherited_counterparts:
+#         entries = [entry for entry in entries
+#                    if (entry.target_lang, entry.concept)
+#                    not in inherited_concepts]
+#         print("Found {} borrowings without inherited counterparts"
+#               .format(len(entries)))
+
+#     print(entries['62'])
+#     print(entries['36856'])
+#     return entries
 
 
 def get_concepts(param_file='./data/parameters.csv'):
@@ -92,9 +216,11 @@ def languages_by_loanword(entries, out_file='out/loanwords_to_languages.tsv'):
     loanwords = {}
     for entry in entries.values():
         try:
-            loanwords[entry.concept].add(entry.src_lang + ' > ' + entry.target_lang)
+            loanwords[entry.concept].add(
+                entry.src_lang + ' > ' + entry.target_lang)
         except KeyError:
-            loanwords[entry.concept] = {entry.src_lang + ' > ' + entry.target_lang}
+            loanwords[entry.concept] = {
+                entry.src_lang + ' > ' + entry.target_lang}
     loanwords = list(loanwords.items())
     loanwords.sort(key=lambda x: len(x[1]), reverse=True)
     with open(out_file, 'w', encoding='utf8') as f:
@@ -108,9 +234,11 @@ def loan_directions(entries, out_file='out/loan_directions.tsv'):
     loanwords = {}
     for entry in entries.values():
         try:
-            loanwords[entry.src_lang + ' > ' + entry.target_lang].add(entry.concept)
+            loanwords[entry.src_lang + ' > ' + entry.target_lang]\
+                .add(entry.concept)
         except KeyError:
-            loanwords[entry.src_lang + ' > ' + entry.target_lang] = {entry.concept}
+            loanwords[entry.src_lang + ' > ' + entry.target_lang] =\
+                {entry.concept}
     loanwords = list(loanwords.items())
     loanwords.sort(key=lambda x: len(x[1]), reverse=True)
     with open(out_file, 'w', encoding='utf8') as f:

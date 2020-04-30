@@ -1,19 +1,28 @@
 # python loanword-viz.py && dot -Tsvg out\loanwords.dot -o out\loanwords.svg && out\loanwords.svg
+# python loanword-viz.py && dot -Tsvg out\loanwords.dot -o out\loanwords-60.svg && out\loanwords-60.svg
+# python loanword-viz.py && dot -Tsvg out\loanwords-counterpartless.dot -o out\loanwords-counterpartless.svg && out\loanwords-counterpartless.svg
 from loanwords import *
 
+### CONFIG ###
 NPMI_THRESHOLD = 0.6
 DIRECTION_RATIO_THRESHOLD = 1.5
-DOT_FILE = 'out/loanwords.dot'
+ONLY_WITHOUT_INHERITED_COUNTERPARTS = False
+##############
 
+if ONLY_WITHOUT_INHERITED_COUNTERPARTS:
+    DOT_FILE = 'out/loanwords-counterpartless.dot'
+else:
+    DOT_FILE = 'out/loanwords.dot'
 
-entries = get_loanwords()
+entries = get_loanwords(discard_forms_with_inherited_counterparts=ONLY_WITHOUT_INHERITED_COUNTERPARTS)
 n_langs = 41
 pmi = pmi(entries, n_langs, per_donor=True, out_file=None)
 
 concepts = set()
 for i, entry in enumerate(pmi):
     if entry[2] < NPMI_THRESHOLD:
-        print("Found {} concept pairs with a normalized PMI >= {}".format(i, NPMI_THRESHOLD))
+        print("Found {} concept pairs with a normalized PMI >= {}"
+              .format(i, NPMI_THRESHOLD))
         break
     concepts.add(entry[0])
     concepts.add(entry[1])
