@@ -1,12 +1,11 @@
-# python loanword-viz.py && dot -Tsvg out\loanwords.dot -o out\loanwords.svg && out\loanwords.svg
 # python loanword-viz.py && dot -Tsvg out\loanwords.dot -o out\loanwords-60.svg && out\loanwords-60.svg
-# python loanword-viz.py && dot -Tsvg out\loanwords-counterpartless.dot -o out\loanwords-counterpartless.svg && out\loanwords-counterpartless.svg
+# python loanword-viz.py && dot -Tsvg out\loanwords-counterpartless.dot -o out\loanwords-counterpartless-70.svg && out\loanwords-counterpartless-70.svg
 from loanwords import *
 
 ### CONFIG ###
-NPMI_THRESHOLD = 0.6
+NPMI_THRESHOLD = 0.7
 DIRECTION_RATIO_THRESHOLD = 1.5
-ONLY_WITHOUT_INHERITED_COUNTERPARTS = False
+ONLY_WITHOUT_INHERITED_COUNTERPARTS = True
 ##############
 
 if ONLY_WITHOUT_INHERITED_COUNTERPARTS:

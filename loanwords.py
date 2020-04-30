@@ -79,17 +79,6 @@ def split_line(generator):
         return line.split(',')
 
 
-# def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
-#     id2lang = {}
-#     with open(infile, encoding='utf8') as f:
-#         next(f)
-#         for line in f:
-#             cells = split_line(line)
-#             entry_id = cells[key_idx]
-#             if to_int:
-#                 entry_id = int(entry_id)
-#             id2lang[entry_id] = cells[val_idx]
-#     return id2lang
 def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
     id2lang = {}
     with open(infile, encoding='utf8') as f:
@@ -153,52 +142,6 @@ def get_loanwords(lang_file='./data/languages.csv',
     print(entries['36856'])
     print(entries.get('19687', 'N/A'))
     return entries
-# def get_loanwords(lang_file='./data/languages.csv',
-#                   param_file='./data/parameters.csv',
-#                   borrowing_file='./data/borrowings.csv',
-#                   form_file='./data/forms.csv',
-#                   discard_forms_with_inherited_counterparts=True):
-#     id2lang = get_id2string(lang_file)
-#     id2param = get_id2string(param_file)
-#     id2cat = get_id2string(param_file, val_idx=3)
-
-#     entries = {}
-#     with open(borrowing_file, encoding='utf8') as f:
-#         next(f)
-#         for line in f:
-#             cells = split_line(line)
-#             entries[cells[1]] = Borrowing(cells[1], id2lang[cells[-1]])
-
-#     if discard_forms_with_inherited_counterparts:
-#         inherited_concepts = set()
-
-#     with open(form_file, encoding='utf8') as f:
-#         next(f)
-#         for line in f:
-#             cells = split_line(line)
-#             try:
-#                 entries[cells[0]].add_values(id2lang[cells[1]],
-#                                              id2param[cells[2]],
-#                                              id2cat[cells[2]])
-#             except KeyError:
-#                 print(cells)
-#                 if discard_forms_with_inherited_counterparts and\
-#                         float(cells[9]) < 0.75:
-#                     inherited_concepts.add((cells[1], cells[2]))
-#                 continue
-
-#     print("Found {} borrowings".format(len(entries)))
-
-#     if discard_forms_with_inherited_counterparts:
-#         entries = [entry for entry in entries
-#                    if (entry.target_lang, entry.concept)
-#                    not in inherited_concepts]
-#         print("Found {} borrowings without inherited counterparts"
-#               .format(len(entries)))
-
-#     print(entries['62'])
-#     print(entries['36856'])
-#     return entries
 
 
 def get_concepts(param_file='./data/parameters.csv'):
@@ -264,6 +207,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
             borrowed[entry.concept] = {lang}
     npmi = []
     concepts = list(borrowed.keys())
+    print(str(len(concepts)) + ' concepts')
     for i in range(len(concepts)):
         x = concepts[i]
         if duplicates_in_output:
