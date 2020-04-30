@@ -15,7 +15,7 @@ else:
 
 entries = get_loanwords(discard_forms_with_inherited_counterparts=ONLY_WITHOUT_INHERITED_COUNTERPARTS)
 n_langs = 41
-pmi = pmi(entries, n_langs, per_donor=True, out_file=None)
+pmi, borrowed = pmi(entries, n_langs, per_donor=True, out_file=None)
 
 concepts = set()
 for i, entry in enumerate(pmi):
@@ -25,6 +25,25 @@ for i, entry in enumerate(pmi):
         break
     concepts.add(entry[0])
     concepts.add(entry[1])
+
+n_langs2concepts = {}
+max_langs = -1
+min_langs = 1000
+for entry in borrowed.items():
+    if entry[0] not in concepts:
+        continue
+    n_langs_for_concept = len(entry[1])
+    if n_langs_for_concept > max_langs:
+        max_langs = n_langs_for_concept
+    if n_langs_for_concept < min_langs:
+        min_langs = n_langs_for_concept
+    try:
+        n_langs2concepts[n_langs_for_concept].append(entry[0])
+    except KeyError:
+        n_langs2concepts[n_langs_for_concept] = [entry[0]]
+print(min_langs, max_langs)
+for entry in n_langs2concepts.items():
+    print(entry)
 
 concept2field = get_id2string('./data/parameters.csv', key_idx=1, val_idx=3)
 field2colour = {'The physical world': 'indianred',
@@ -61,6 +80,10 @@ implications = {(entry[0], entry[1]): (entry[2]) for entry in implications}
 
 with open(DOT_FILE, 'w', encoding='utf8') as f:
     f.write('digraph loanwords {\n\tnode [style = filled];\n')
+
+    for i in reversed(range(min_langs, max_langs + 1)):
+        f.write('{} [pos="0,{}!"];\n'.format(i, max_langs - i))
+
     for concept in concepts:
         f.write('\t"{}" [color={}];\n'.format(concept.replace(' (', '\\n('),
                                               field2colour[concept2field[concept]]))
@@ -78,7 +101,22 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
             f.write('\t\t"{}" -> "{}";\n'.format(e1, e0))
         else:
             undirected.append((e0, e1))
-    f.write('\t}\n\n\tsubgraph undir {\n\t\tedge [dir=none];\n')
+    f.write('\t}\n\n\tsubgraph undir {\n\t\tedge [dir=none];\n\t\t')
+
+    # Number of languages per loaned concept
+    f.write(' -> '.join([str(i) for i in reversed(range(min_langs, max_langs + 1))]))
+    f.write(';\n')
+
+    # Concept pairs without directionality
     for entry in undirected:
         f.write('\t\t"{}" -> "{}";\n'.format(*entry))
-    f.write('\t}\n}\n')
+    f.write('\t}\n')
+
+    # Sort by borrowability
+    for i in reversed(range(min_langs, max_langs + 1)):
+        f.write('\t{{rank = same; {}; '.format(i))
+        if i in n_langs2concepts:
+            for concept in n_langs2concepts[i]:
+                f.write('"{}";'.format(concept.replace(' (', '\\n(')))
+        f.write('}\n')
+    f.write('}\n')

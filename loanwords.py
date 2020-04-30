@@ -235,7 +235,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
                     'Languages\n')
             for entry in npmi:
                 f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
-    return npmi
+    return npmi, borrowed
 
 
 def implications(entries, n_langs, min_langs=3, per_donor=False,
