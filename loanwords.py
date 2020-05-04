@@ -22,11 +22,6 @@ class Borrowing:
 
 
 def line_gen(lines):
-    # for line in lines:
-    #     response = yield line
-    #     if response is not None:
-    #         yield "dummy"
-    #         yield response
     gen_line = next(lines)
     while True:
         response = yield gen_line
@@ -93,10 +88,10 @@ def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
     return id2lang
 
 
-def get_loanwords(lang_file='./data/languages.csv',
-                  param_file='./data/parameters.csv',
-                  borrowing_file='./data/borrowings.csv',
-                  form_file='./data/forms.csv',
+def get_loanwords(lang_file='./data/wold/languages.csv',
+                  param_file='./data/wold/parameters.csv',
+                  borrowing_file='./data/wold/borrowings.csv',
+                  form_file='./data/wold/forms.csv',
                   discard_forms_with_inherited_counterparts=True):
     id2lang = get_id2string(lang_file)
     id2param = get_id2string(param_file)
@@ -144,7 +139,7 @@ def get_loanwords(lang_file='./data/languages.csv',
     return entries
 
 
-def get_concepts(param_file='./data/parameters.csv'):
+def get_concepts(param_file='./data/wold/parameters.csv'):
     concept2field = get_id2string(param_file, key_idx=1, val_idx=3)
     field2size = {}
     for concept in concept2field:

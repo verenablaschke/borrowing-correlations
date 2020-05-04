@@ -1,17 +1,19 @@
-# python loanword-viz.py && dot -Tsvg out\loanwords.dot -o out\loanwords-60.svg && out\loanwords-60.svg
-# python loanword-viz.py && dot -Tsvg out\loanwords-counterpartless.dot -o out\loanwords-counterpartless-70.svg && out\loanwords-counterpartless-70.svg
+# python loanword_viz.py && dot -Tsvg out\loanwords-60.dot -o out\loanwords-60.svg && out\loanwords-60.svg
+# python loanword_viz.py && dot -Tsvg out\loanwords-counterpartless-70.dot -o out\loanwords-counterpartless-70.svg && out\loanwords-counterpartless-70.svg
 from loanwords import *
 
 ### CONFIG ###
-NPMI_THRESHOLD = 0.7
+NPMI_THRESHOLD = 75  # in %
 DIRECTION_RATIO_THRESHOLD = 1.5
 ONLY_WITHOUT_INHERITED_COUNTERPARTS = True
 ##############
 
+DOT_FILE = 'out/loanwords'
 if ONLY_WITHOUT_INHERITED_COUNTERPARTS:
-    DOT_FILE = 'out/loanwords-counterpartless.dot'
-else:
-    DOT_FILE = 'out/loanwords.dot'
+    DOT_FILE += '-counterpartless'
+DOT_FILE += '-' + str(NPMI_THRESHOLD) + '.dot'
+
+NPMI_THRESHOLD /= 100
 
 entries = get_loanwords(discard_forms_with_inherited_counterparts=ONLY_WITHOUT_INHERITED_COUNTERPARTS)
 n_langs = 41
@@ -45,7 +47,7 @@ print(min_langs, max_langs)
 for entry in n_langs2concepts.items():
     print(entry)
 
-concept2field = get_id2string('./data/parameters.csv', key_idx=1, val_idx=3)
+concept2field = get_id2string('./data/wold/parameters.csv', key_idx=1, val_idx=3)
 field2colour = {'The physical world': 'indianred',
                 'Kinship': 'brown1',
                 'Animals': 'coral2',
