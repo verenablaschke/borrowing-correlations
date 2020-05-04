@@ -150,6 +150,16 @@ def get_concepts(param_file='./data/wold/parameters.csv'):
     return concept2field, field2size
 
 
+def concept_to_langs(entries):
+    concept2langs = {}
+    for entry in entries.values():
+        try:
+            concept2langs[entry.concept].add(entry.target_lang)
+        except KeyError:
+            concept2langs[entry.concept] = {entry.target_lang}
+    return concept2langs
+
+
 def languages_by_loanword(entries, out_file='out/loanwords_to_languages.tsv'):
     loanwords = {}
     for entry in entries.values():
