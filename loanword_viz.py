@@ -113,6 +113,7 @@ concept_replacements = {'male(1)': 'male\\n(human)',
                         'to think(2)': 'to think\\n(opinion)',
                         'the knife(1)': 'the knife\\n(cutlery)',
                         'the knife(2)': 'the knife\\n(preparing food)',
+                        'the fork(2)/pitchfork': 'the fork\\n(pitchfork)'
                         }
 
 concepts = set()
@@ -172,7 +173,9 @@ def clean_up_concept(concept):
         return concept_replacements[concept]
     except KeyError:
         return concept.replace(' (', '\\n(').replace(' or ', '\\nor ') \
-                      .replace(' of ', '\\nof ').replace(' on ', '\\non ')
+                      .replace(' of ', '\\nof ').replace(' on ', '\\non ') \
+                      .replace('/', '/\\n').replace("'s ", "'s\\n") \
+                      .replace(' under ', '\\nunder ')
 
 
 with open(DOT_FILE, 'w', encoding='utf8') as f:
@@ -182,14 +185,16 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
         f.write('{} [pos="0,{}!"];\n'.format(i, max_langs - i))
 
     for concept in concepts:
-        f.write('\t"{}" [color={}];\n'.format(clean_up_concept(concept),
-                                              field2colour[concept2field[concept]]))
+        f.write('\t"{}" [color={}];\n'
+                .format(clean_up_concept(concept),
+                        field2colour[concept2field[concept]]))
 
     if ADD_UNCONNECTED_CONCEPTS:
         for concept_list in n_langs2singleton_concepts.values():
             for concept in concept_list:
-                f.write('\t"{}" [color={}];\n'.format(clean_up_concept(concept),
-                                                      field2colour[concept2field[concept]]))
+                f.write('\t"{}" [color={}];\n'
+                        .format(clean_up_concept(concept),
+                                field2colour[concept2field[concept]]))
 
     f.write('\n\tsubgraph dir {\n')
     undirected = []
@@ -208,7 +213,8 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
     f.write('\t}\n\n\tsubgraph undir {\n\t\tedge [dir=none];\n\t\t')
 
     # Number of languages per loaned concept
-    f.write(' -> '.join([str(i) for i in reversed(range(min_langs, max_langs + 1))]))
+    f.write(' -> '.join([str(i) for i in reversed(range(min_langs,
+                                                        max_langs + 1))]))
     f.write(';\n')
 
     # Concept pairs without directionality
@@ -223,7 +229,7 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
             for concept in n_langs2concepts[i]:
                 f.write('"{}";'.format(clean_up_concept(concept)))
         if ADD_UNCONNECTED_CONCEPTS:
-            if i in n_langs2concepts:
+            if i in n_langs2singleton_concepts:
                 for concept in n_langs2singleton_concepts[i]:
                     f.write('"{}";'.format(clean_up_concept(concept)))
         f.write('}\n')
