@@ -32,11 +32,11 @@ def line_gen(lines):
             gen_line = next(lines, None)
 
 
-def split_line(generator):
+def split_line(generator, sep=','):
     line = next(generator, None)
     if line is None:
         return None
-    line = line.strip()
+    line = line[:-1]
     if '"' in line:
         # Some entries that are on several lines instead of one because of a
         # line break in a comment.
@@ -46,45 +46,53 @@ def split_line(generator):
                 if next_line is None:
                     break
                 try:
-                    int(next_line.split(',')[0])
+                    int(next_line.split(sep)[0])
                     generator.send(next_line)
                     break
                 except ValueError:
                     line += ' ' + next_line.strip()
         if line.count('"') == 1:
-            return line.split(',')
+            return line.split(sep)
         cells = []
         line = line.replace('""', "'")
         for i, quote_cell in enumerate(line.split('"')):
             if i % 2 == 0:
                 if quote_cell == '':
                     continue
-                if quote_cell == ',':
+                if quote_cell == sep:
                     cells += ['']
                     continue
-                if quote_cell[-1] == ',':
+                if quote_cell[-1] == sep:
                     quote_cell = quote_cell[:-1]
-                if quote_cell[0] == ',':
+                if quote_cell[0] == sep:
                     quote_cell = quote_cell[1:]
-                cells += quote_cell.split(',')
+                cells += quote_cell.split(sep)
             else:
                 cells += [quote_cell]
         return cells
     else:
-        return line.split(',')
+        return line.split(sep)
 
 
-def get_id2string(infile, to_int=False, key_idx=0, val_idx=1):
+def get_id2string(infile, to_int=False, key_idx=0, val_idx=1, sep=','):
     id2lang = {}
     with open(infile, encoding='utf8') as f:
         generator = line_gen(f)
-        cells = split_line(generator)
+        cells = split_line(generator, sep=sep)
         while cells is not None:
-            entry_id = cells[key_idx]
-            if to_int:
-                entry_id = int(entry_id)
-            id2lang[entry_id] = cells[val_idx]
-            cells = split_line(generator)
+            try:
+                entry_id = cells[key_idx]
+                if to_int:
+                    entry_id = int(entry_id)
+            except IndexError:
+                print('Could not parse the following line (index {}): {}'
+                      .format(key_idx, cells))
+            try:
+                id2lang[entry_id] = cells[val_idx]
+            except IndexError:
+                print('Could not parse the following line (index {}): {}'
+                      .format(val_idx, cells))
+            cells = split_line(generator, sep=sep)
     return id2lang
 
 
