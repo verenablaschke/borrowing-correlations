@@ -1,4 +1,5 @@
 import math
+from copy import copy
 
 
 class Borrowing:
@@ -19,6 +20,11 @@ class Borrowing:
 
     def synonym(self, target_lang, concept):
         return self.target_lang == target_lang and self.concept == concept
+
+    def copy_and_index_lang(self, index):
+        c = copy(self)
+        c.target_lang += '-' + str(index)
+        return c
 
 
 def line_gen(lines):
@@ -100,7 +106,9 @@ def get_loanwords(lang_file='./data/wold/languages.csv',
                   param_file='./data/wold/parameters.csv',
                   borrowing_file='./data/wold/borrowings.csv',
                   form_file='./data/wold/forms.csv',
-                  discard_forms_with_inherited_counterparts=True):
+                  discard_forms_with_inherited_counterparts=True,
+                  sort_by_target_lang=False,
+                  return_concepts=False):
     id2lang = get_id2string(lang_file)
     id2param = get_id2string(param_file)
     id2cat = get_id2string(param_file, val_idx=3)
@@ -117,15 +125,22 @@ def get_loanwords(lang_file='./data/wold/languages.csv',
     if discard_forms_with_inherited_counterparts:
         inherited_concepts = set()
 
+    target_langs = set()
+    concepts = set()
     with open(form_file, encoding='utf8') as f:
         next(f)
         generator = line_gen(f)
         cells = split_line(generator)
         while cells is not None:
             try:
-                entries[cells[0]].add_values(id2lang[cells[1]],
-                                             id2param[cells[2]],
+                target_lang = id2lang[cells[1]]
+                concept = id2param[cells[2]]
+                entries[cells[0]].add_values(target_lang, concept,
                                              id2cat[cells[2]])
+                if sort_by_target_lang:
+                    target_langs.add(target_lang)
+                if return_concepts:
+                    concepts.add(concept)
             except KeyError:
                 if discard_forms_with_inherited_counterparts and cells[9] and\
                         float(cells[9]) < 0.75:
@@ -141,9 +156,19 @@ def get_loanwords(lang_file='./data/wold/languages.csv',
                    not in inherited_concepts}
         print("Found {} borrowings without inherited counterparts"
               .format(len(entries)))
+    # print(entries['36856'])
+    # print(entries.get('19687', 'N/A'))
 
-    print(entries['36856'])
-    print(entries.get('19687', 'N/A'))
+    if sort_by_target_lang:
+        entries_by_lang = {}
+        for entry in entries.values():
+            try:
+                entries_by_lang[entry.target_lang].append(entry)
+            except KeyError:
+                entries_by_lang[entry.target_lang] = [entry]
+        entries = entries_by_lang
+    if return_concepts:
+        return entries, concepts
     return entries
 
 
@@ -206,10 +231,15 @@ def loan_directions(entries, out_file='out/loan_directions.tsv'):
 
 
 def pmi(entries, n_langs, min_langs=3, per_donor=False,
-        duplicates_in_output=False, out_file='out/nmpi.tsv'):
+        duplicates_in_output=False, out_file='out/nmpi.tsv',
+        entries_is_entry_set=False):
     assert min_langs > 0
     borrowed = {}
-    for entry in entries.values():
+    if entries_is_entry_set:
+        entry_set = entries
+    else:
+        entry_set = entry in entries.values()
+    for entry in entry_set:
         if per_donor:
             lang = entry.src_lang + ' > ' + entry.target_lang
         else:
@@ -219,7 +249,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
         except KeyError:
             borrowed[entry.concept] = {lang}
     npmi = []
-    concepts = list(borrowed.keys())
+    concepts = sorted(list(borrowed.keys()))
     print(str(len(concepts)) + ' concepts')
     for i in range(len(concepts)):
         x = concepts[i]
