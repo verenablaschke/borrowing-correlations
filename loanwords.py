@@ -250,7 +250,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
             borrowed[entry.concept] = {lang}
     npmi = []
     concepts = sorted(list(borrowed.keys()))
-    print(str(len(concepts)) + ' concepts')
+    # print(str(len(concepts)) + ' concepts')
     for i in range(len(concepts)):
         x = concepts[i]
         if duplicates_in_output:
@@ -271,7 +271,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
             h_xy = -math.log(p_xy)
             npmi.append((x, y, pmi / h_xy, p_x, intersection))
     npmi.sort(key=lambda x: (x[2], x[3], len(x[4])), reverse=True)
-    print(npmi[0])
+    # print(npmi[0])
     if out_file:
         with open(out_file, 'w', encoding='utf8') as f:
             f.write('Concept X\tConcept Y\tNormalized PMI\tBorrowability X\t'
