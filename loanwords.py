@@ -282,11 +282,15 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
 
 
 def implications(entries, n_langs, min_langs=3, per_donor=False,
-                 out_file='out/implications.tsv'):
+                 out_file='out/implications.tsv', entries_is_entry_set=False):
     # "If a language borrowed X, it also borrowed Y."
     assert min_langs > 0
     borrowed = {}
-    for entry in entries.values():
+    if entries_is_entry_set:
+        entry_set = entries
+    else:
+        entry_set = entry in entries.values()
+    for entry in entry_set:
         if per_donor:
             lang = entry.src_lang + ' > ' + entry.target_lang
         else:
@@ -308,7 +312,7 @@ def implications(entries, n_langs, min_langs=3, per_donor=False,
             implications.append((x, y, strength, borrowability_x,
                                  intersection))
     implications.sort(key=lambda x: (x[2], x[3], len(x[4])), reverse=True)
-    print(implications[0])
+    # print(implications[0])
     if out_file:
         with open(out_file, 'w', encoding='utf8') as f:
             f.write('Concept X\tConcept Y\tImplication strength\t'
