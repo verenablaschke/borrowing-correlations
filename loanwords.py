@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from copy import copy
 
 
@@ -320,6 +321,56 @@ def implications(entries, n_langs, min_langs=3, per_donor=False,
             for entry in implications:
                 f.write('{}\t{}\t{:.6f}\t{:.6f}\t{}\n'.format(*entry))
     return implications
+
+
+def add_entry(entry_dict, key, idx, value, array_len, dtype):
+    try:
+        entry_dict[key][idx] = value
+    except KeyError:
+        array = np.empty(array_len, dtype=dtype)
+        array.fill(np.NaN)
+        array[idx] = value
+        entry_dict[key] = array
+
+
+def pmi_and_implications(entry_set, concepts2pmi, concepts2intersection,
+                         concept2borrowability, idx, n_langs, per_donor,
+                         min_langs=3, array_len=1000):
+    assert min_langs > 0
+    borrowed = {}
+    for entry in entry_set:
+        if per_donor:
+            lang = entry.src_lang + ' > ' + entry.target_lang
+        else:
+            lang = entry.target_lang
+        try:
+            borrowed[entry.concept].add(lang)
+        except KeyError:
+            borrowed[entry.concept] = {lang}
+    npmi = []
+    concepts = sorted(list(borrowed.keys()))
+    n_concepts = len(concepts)
+    for i in range(n_concepts):
+        x = concepts[i]
+        for j in range(i + 1, n_concepts):
+            y = concepts[j]
+            intersection = borrowed[x].intersection(borrowed[y])
+            if len(intersection) < min_langs:
+                continue
+            p_x = len(borrowed[x]) / n_langs
+            p_y = len(borrowed[y]) / n_langs
+            p_xy = len(intersection) / n_langs
+            pmi = math.log(p_xy / (p_x * p_y))
+            h_xy = -math.log(p_xy)
+            add_entry(concepts2pmi, (x, y), idx, pmi / h_xy, array_len,
+                      np.float32)
+            add_entry(concepts2intersection, (x, y), idx, len(intersection),
+                      array_len, np.int8)
+            add_entry(concept2borrowability, x, idx, len(borrowed[x]),
+                      array_len, np.int8)
+            add_entry(concept2borrowability, y, idx, len(borrowed[y]),
+                      array_len, np.int8)
+    return concepts2pmi, concepts2intersection, concept2borrowability
 
 
 def implications_by_field(entries, n_langs, min_langs=3, per_donor=False,
