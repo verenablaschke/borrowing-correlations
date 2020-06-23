@@ -335,8 +335,9 @@ def add_entry(entry_dict, key, idx, value, array_len, dtype):
 
 def pmi_and_implications(entry_set, concepts2pmi, concepts2intersection,
                          concept2borrowability, idx, n_langs, per_donor,
-                         min_langs=3, array_len=1000):
-    assert min_langs > 0
+                        #  min_langs=3, 
+                         array_len=1000):
+    # assert min_langs > 0
     borrowed = {}
     for entry in entry_set:
         if per_donor:
@@ -354,17 +355,21 @@ def pmi_and_implications(entry_set, concepts2pmi, concepts2intersection,
         x = concepts[i]
         for j in range(i + 1, n_concepts):
             y = concepts[j]
-            intersection = borrowed[x].intersection(borrowed[y])
-            if len(intersection) < min_langs:
-                continue
-            p_x = len(borrowed[x]) / n_langs
-            p_y = len(borrowed[y]) / n_langs
-            p_xy = len(intersection) / n_langs
-            pmi = math.log(p_xy / (p_x * p_y))
-            h_xy = -math.log(p_xy)
-            add_entry(concepts2pmi, (x, y), idx, pmi / h_xy, array_len,
+            intersection = len(borrowed[x].intersection(borrowed[y]))
+            # if intersection < min_langs:
+            #     continue
+            if intersection == 0:
+                npmi = 0
+            else:
+                p_x = len(borrowed[x]) / n_langs
+                p_y = len(borrowed[y]) / n_langs
+                p_xy = intersection / n_langs
+                pmi = math.log(p_xy / (p_x * p_y))
+                h_xy = -math.log(p_xy)
+                npmi = pmi / h_xy
+            add_entry(concepts2pmi, (x, y), idx, npmi, array_len,
                       np.float32)
-            add_entry(concepts2intersection, (x, y), idx, len(intersection),
+            add_entry(concepts2intersection, (x, y), idx, intersection,
                       array_len, np.int8)
             add_entry(concept2borrowability, x, idx, len(borrowed[x]),
                       array_len, np.int8)
