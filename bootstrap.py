@@ -11,16 +11,16 @@ N_RESAMPLES = 1000
 OUT_FILE = '/content/gdrive/My Drive/colab_files/bootstrap.txt'
 ##############
 
-entries, concepts = get_loanwords(
-    lang_file='/content/gdrive/My Drive/colab_files/data/wold/languages.csv',
-    param_file='/content/gdrive/My Drive/colab_files/data/wold/parameters.csv',
-    borrowing_file='/content/gdrive/My Drive/colab_files/data/wold/borrowings.csv',
-    form_file='/content/gdrive/My Drive/colab_files/data/wold/forms.csv',
-    discard_forms_with_inherited_counterparts=ONLY_WO_INHERITED_COUNTERPARTS,
-    sort_by_target_lang=True, return_concepts=True)
 # entries, concepts = get_loanwords(
+#     lang_file='/content/gdrive/My Drive/colab_files/data/wold/languages.csv',
+#     param_file='/content/gdrive/My Drive/colab_files/data/wold/parameters.csv',
+#     borrowing_file='/content/gdrive/My Drive/colab_files/data/wold/borrowings.csv',
+#     form_file='/content/gdrive/My Drive/colab_files/data/wold/forms.csv',
 #     discard_forms_with_inherited_counterparts=ONLY_WO_INHERITED_COUNTERPARTS,
 #     sort_by_target_lang=True, return_concepts=True)
+entries, concepts = get_loanwords(
+    discard_forms_with_inherited_counterparts=ONLY_WO_INHERITED_COUNTERPARTS,
+    sort_by_target_lang=True, return_concepts=True)
 target_langs = list(entries.keys())
 n_langs = len(target_langs)
 print(n_langs, "languages.")
@@ -102,8 +102,8 @@ with open(OUT_FILE, 'w', encoding='utf8') as f:
             implication_xy_threshold, implication_xy_threshold_n,
             implication_yx_mean, implication_yx_sd,
             implication_yx_threshold, implication_yx_threshold_n,
-            borrowability_x, borrowability_y, intersection, n_samples))
-        if pmi_mean > 0.7:
+            borrowability_x, borrowability_y, intersection_mean, n_samples))
+        if pmi_mean > 0.7 and intersection_mean > 2.5:
             print('{}, {}\t'
                   'PMI ({}, {}, {}, {})\t'
                   'X->Y ({}, {}, {}, {})\t'
@@ -114,6 +114,6 @@ with open(OUT_FILE, 'w', encoding='utf8') as f:
                       implication_xy_threshold, implication_xy_threshold_n,
                       implication_yx_mean, implication_yx_sd,
                       implication_yx_threshold, implication_yx_threshold_n,
-                      borrowability_x, borrowability_y, intersection, n_samples))
+                      borrowability_x, borrowability_y, intersection_mean,
+                      n_samples))
 print('DONE.')
-
