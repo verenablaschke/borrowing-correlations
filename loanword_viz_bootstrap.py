@@ -1,30 +1,32 @@
-# python loanword_viz.py && dot -Tsvg out\loanwords-60.dot -o out\loanwords-60.svg && out\loanwords-60.svg
-# python loanword_viz.py && dot -Tsvg out\loanwords-counterpartless-70.dot -o out\loanwords-counterpartless-70.svg && out\loanwords-counterpartless-70.svg
+# dot -Tsvg out\loanwords-81-50.dot -o out\loanwords-81-50.svg && out\loanwords-81-50.svg
 from loanwords import *
+from inspect_bootstrap_data import *
 
 ### CONFIG ###
-NPMI_THRESHOLD = 70  # in %
+NPMI_THRESHOLD = 50  # in %
+IMPL_THRESHOLD = 81  # in %
 DIRECTION_RATIO_THRESHOLD = 1.5
-ONLY_WITHOUT_INHERITED_COUNTERPARTS = True
-ADD_UNCONNECTED_CONCEPTS = True
 N_LANG_THRESHOLD = 3
 ##############
 
-DOT_FILE = 'out/loanwords'
-if ONLY_WITHOUT_INHERITED_COUNTERPARTS:
-    DOT_FILE += '-counterpartless2'
-DOT_FILE += '-' + str(NPMI_THRESHOLD) + '.dot'
+DOT_FILE = 'out/loanwords-' + str(IMPL_THRESHOLD) + '-' + str(NPMI_THRESHOLD) + '.dot'
 
 NPMI_THRESHOLD /= 100
+IMPL_THRESHOLD /= 100
 
-entries = get_loanwords(
-    discard_forms_with_inherited_counterparts=ONLY_WITHOUT_INHERITED_COUNTERPARTS)
-n_langs = 41
-pmi, borrowed = pmi(entries, n_langs, per_donor=True, out_file=None)
+entries_filtered = prefilter(axis="IMPL", threshold_npmi=IMPL_THRESHOLD,
+                    threshold_impl=NPMI_THRESHOLD,
+                    threshold_intersection=N_LANG_THRESHOLD,
+                    outfile=None, implication_direction=True)
+for entry in entries_filtered:
+    print(entry.__str__())
+entries_all = prefilter(axis="IMPL", threshold_npmi=-1,
+                    threshold_impl=-1,
+                    threshold_intersection=N_LANG_THRESHOLD,
+                    outfile=None)
 concept2field = get_id2string('./data/wold/parameters.csv', key_idx=1,
                               val_idx=3)
-if ADD_UNCONNECTED_CONCEPTS:
-    concept2langs = concept_to_langs(entries)
+
 field2idx = {'The physical world': 0,
              'Kinship': 1,
              'Animals': 2,
@@ -117,58 +119,26 @@ concept_replacements = {'male(1)': 'male\\n(human)',
                         'the fork(2)/pitchfork': 'the fork\\n(pitchfork)'
                         }
 
-print("Found {} concept pairs".format(len(pmi)))
 concepts = set()
-for i, entry in enumerate(pmi):  # the list is sorted by npmi score
-    if entry[2] < NPMI_THRESHOLD:
-        print("Found {} concept pairs with a normalized PMI >= {}"
-              .format(i, NPMI_THRESHOLD))
-        break
-    print("{}\t{}".format(entry[0], entry[1]))
-    concepts.add(entry[0])
-    concepts.add(entry[1])
+for i, entry in enumerate(entries_filtered):
+    concepts.add(entry.x)
 
 n_langs2concepts = {}
 max_langs = -1
 min_langs = 1000
-for entry in borrowed.items():
-    if entry[0] not in concepts:
-        continue
-    n_langs_for_concept = len(entry[1])
+for entry in entries_all:
+    n_langs_for_concept = round(entry.borrow_x)
     if n_langs_for_concept > max_langs:
         max_langs = n_langs_for_concept
     if n_langs_for_concept < min_langs:
         min_langs = n_langs_for_concept
     try:
-        n_langs2concepts[n_langs_for_concept].append(entry[0])
+        n_langs2concepts[n_langs_for_concept].add(entry.x)
     except KeyError:
-        n_langs2concepts[n_langs_for_concept] = [entry[0]]
+        n_langs2concepts[n_langs_for_concept] = {entry.x}
 print("min langs", min_langs, "\tmax langs", max_langs)
 for entry in n_langs2concepts.items():
-    entry[1].sort(key=lambda x: field2idx[concept2field[x]])
     print(entry)
-
-if ADD_UNCONNECTED_CONCEPTS:
-    n_langs2singleton_concepts = {}
-    for entry in concept2langs.items():
-        if entry[0] in concepts:
-            continue
-        n_langs_for_concept = len(entry[1])
-        if n_langs_for_concept < N_LANG_THRESHOLD:
-            continue
-        if n_langs_for_concept > max_langs:
-            max_langs = n_langs_for_concept
-        try:
-            n_langs2singleton_concepts[n_langs_for_concept].append(entry[0])
-        except KeyError:
-            n_langs2singleton_concepts[n_langs_for_concept] = [entry[0]]
-    print(min_langs, max_langs)
-    for entry in n_langs2singleton_concepts.items():
-        entry[1].sort(key=lambda x: field2idx[concept2field[x]])
-        print(entry)
-
-implications = implications(entries, n_langs, per_donor=True, out_file=None)
-implications = {(entry[0], entry[1]): (entry[2]) for entry in implications}
 
 
 def clean_up_concept(concept):
@@ -181,7 +151,6 @@ def clean_up_concept(concept):
                       .replace(' under ', '\\nunder ')
 
 
-concept_pairs = []
 with open(DOT_FILE, 'w', encoding='utf8') as f:
     f.write('digraph loanwords {\n\tnode [style = filled];\n')
 
@@ -189,36 +158,32 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
         f.write('{} [pos="0,{}!"];\n'.format(i, max_langs - i))
 
     for concept in concepts:
-        f.write('\t"{}" [color={}];\n'
-                .format(clean_up_concept(concept),
-                        field2colour[concept2field[concept]]))
+        f.write('\t"{}" [color={}];\n'.format(clean_up_concept(concept),
+                            field2colour[concept2field[concept]]))
 
-    if ADD_UNCONNECTED_CONCEPTS:
-        for concept_list in n_langs2singleton_concepts.values():
-            for concept in concept_list:
-                f.write('\t"{}" [color={}];\n'
-                        .format(clean_up_concept(concept),
-                                field2colour[concept2field[concept]]))
+    for concept_set in n_langs2concepts.values():
+        for concept in concept_set:
+            if concept in concepts:
+                continue
+            f.write('\t"{}" [color={}];\n'
+                    .format(clean_up_concept(concept),
+                            field2colour[concept2field[concept]]))
 
     f.write('\n\tsubgraph dir {\n')
     undirected = []
-    for entry in pmi:
-        if entry[2] < NPMI_THRESHOLD:
-            break
-        directionality = implications[(entry[0], entry[1])] / implications[(entry[1], entry[0])]
-        e0 = clean_up_concept(entry[0])
-        e1 = clean_up_concept(entry[1])
-        if directionality > DIRECTION_RATIO_THRESHOLD:
+    for entry in entries_filtered:
+        direction = entry.direction
+        e0 = clean_up_concept(entry.x)
+        e1 = clean_up_concept(entry.y)
+        if direction == '>':
             f.write('\t\t"{}" -> "{}";\n'.format(e0, e1))
-            concept_pairs.append((entry[0], '>', entry[1]))
-        elif 1 / DIRECTION_RATIO_THRESHOLD > directionality:
+            print(entry.x, '>', entry.y)
+        elif direction == '<':
             f.write('\t\t"{}" -> "{}";\n'.format(e1, e0))
-            concept_pairs.append((entry[1], '>', entry[0]))
+            print(entry.y, '>', entry.x)
         else:
             undirected.append((e0, e1))
-            concept_pairs.append((entry[0], '<>', entry[1]))
-        # concept_pairs.append((entry[0], entry[1], implications[(entry[0], entry[1])]))
-        # concept_pairs.append((entry[1], entry[0], implications[(entry[1], entry[0])]))
+            print(entry.x, '<>', entry.y)
     f.write('\t}\n\n\tsubgraph undir {\n\t\tedge [dir=none];\n\t\t')
 
     # Number of languages per loaned concept
@@ -237,16 +202,7 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
         if i in n_langs2concepts:
             for concept in n_langs2concepts[i]:
                 f.write('"{}";'.format(clean_up_concept(concept)))
-        if ADD_UNCONNECTED_CONCEPTS:
-            if i in n_langs2singleton_concepts:
-                for concept in n_langs2singleton_concepts[i]:
-                    f.write('"{}";'.format(clean_up_concept(concept)))
         f.write('}\n')
     f.write('}\n')
 
 print("Wrote output to", DOT_FILE)
-
-# for entry in sorted(concept_pairs, key=lambda x: x[2], reverse=True):
-#     print("{}\t{}\t{:.2f}".format(*entry))
-for entry in concept_pairs:
-    print("{}\t{}\t{}".format(*entry))

@@ -239,7 +239,7 @@ def pmi(entries, n_langs, min_langs=3, per_donor=False,
     if entries_is_entry_set:
         entry_set = entries
     else:
-        entry_set = entry in entries.values()
+        entry_set = entries.values()
     for entry in entry_set:
         if per_donor:
             lang = entry.src_lang + ' > ' + entry.target_lang
@@ -290,7 +290,7 @@ def implications(entries, n_langs, min_langs=3, per_donor=False,
     if entries_is_entry_set:
         entry_set = entries
     else:
-        entry_set = entry in entries.values()
+        entry_set = entries.values()
     for entry in entry_set:
         if per_donor:
             lang = entry.src_lang + ' > ' + entry.target_lang
