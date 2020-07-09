@@ -9,21 +9,20 @@ DIRECTION_RATIO_THRESHOLD = 1.5
 N_LANG_THRESHOLD = 3
 ##############
 
-DOT_FILE = 'out/loanwords-' + str(IMPL_THRESHOLD) + '-' + str(NPMI_THRESHOLD) + '.dot'
+DOT_FILE = 'out/loanwords-{}-{}.dot'.format(IMPL_THRESHOLD, NPMI_THRESHOLD)
 
 NPMI_THRESHOLD /= 100
 IMPL_THRESHOLD /= 100
 
-entries_filtered = prefilter(axis="IMPL", threshold_npmi=IMPL_THRESHOLD,
-                    threshold_impl=NPMI_THRESHOLD,
-                    threshold_intersection=N_LANG_THRESHOLD,
-                    outfile=None, implication_direction=True)
+entries_filtered = prefilter(axis="IMPL", threshold_npmi=NPMI_THRESHOLD,
+                             threshold_impl=IMPL_THRESHOLD,
+                             threshold_intersection=N_LANG_THRESHOLD,
+                             impl_dir_multiplier=DIRECTION_RATIO_THRESHOLD,
+                             outfile=None, implication_direction=True)
 for entry in entries_filtered:
-    print(entry.__str__())
-entries_all = prefilter(axis="IMPL", threshold_npmi=-1,
-                    threshold_impl=-1,
-                    threshold_intersection=N_LANG_THRESHOLD,
-                    outfile=None)
+    print(entry.impl_str())
+entries_all = prefilter(axis="IMPL", threshold_npmi=-1, threshold_impl=-1,
+                        threshold_intersection=N_LANG_THRESHOLD, outfile=None)
 concept2field = get_id2string('./data/wold/parameters.csv', key_idx=1,
                               val_idx=3)
 
@@ -157,12 +156,15 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
     for i in reversed(range(min_langs, max_langs + 1)):
         f.write('{} [pos="0,{}!"];\n'.format(i, max_langs - i))
 
-    for concept in concepts:
-        f.write('\t"{}" [color={}];\n'.format(clean_up_concept(concept),
-                            field2colour[concept2field[concept]]))
+    # Add the concepts in implication relationships first so they will be
+    # close to the (left) edge and easier to find.
+    for concept in sorted(concepts):
+        f.write('\t"{}" [color={}];\n'
+                .format(clean_up_concept(concept),
+                        field2colour[concept2field[concept]]))
 
     for concept_set in n_langs2concepts.values():
-        for concept in concept_set:
+        for concept in sorted(concept_set):
             if concept in concepts:
                 continue
             f.write('\t"{}" [color={}];\n'
@@ -177,13 +179,10 @@ with open(DOT_FILE, 'w', encoding='utf8') as f:
         e1 = clean_up_concept(entry.y)
         if direction == '>':
             f.write('\t\t"{}" -> "{}";\n'.format(e0, e1))
-            print(entry.x, '>', entry.y)
         elif direction == '<':
             f.write('\t\t"{}" -> "{}";\n'.format(e1, e0))
-            print(entry.y, '>', entry.x)
-        else:
+        elif direction == '<>':
             undirected.append((e0, e1))
-            print(entry.x, '<>', entry.y)
     f.write('\t}\n\n\tsubgraph undir {\n\t\tedge [dir=none];\n\t\t')
 
     # Number of languages per loaned concept

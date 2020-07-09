@@ -36,10 +36,16 @@ class Implication:
                'pmi_mean={:.2f} pmi_sd={:.2f} ({:.2f}, {:.2f})\t'\
                'borrowability_x={:.2f}, intersection={:.2f}\t'\
                '{} {} {}'.format(
-                   self.x, self.direction if self.add_direction else '->', self.y, self.mean, self.sd, self.z, self.zn,
+                   self.x, self.direction if self.add_direction else '->',
+                   self.y, self.mean, self.sd, self.z, self.zn,
                    self.npmi_mean, self.npmi_sd, self.npmi_z, self.npmi_zn,
                    self.borrow_x, self.intersection,
-                   self.x_field, self.direction if self.add_direction else '->', self.y_field)
+                   self.x_field,
+                   self.direction if self.add_direction else '->',
+                   self.y_field)
+
+    def impl_str(self):
+        return '{} {} {}'.format(self.x, self.direction, self.y)
 
 
 def concept_translations(verbose=False):
@@ -103,6 +109,7 @@ def prune(threshold, entries, semantic_net, wold2clics, axis, verbose=False):
 
 def prefilter(axis, threshold_npmi=0, threshold_impl=0,
               threshold_intersection=3, implication_direction=False,
+              impl_dir_multiplier=1.5,
               infile='out/bootstrap.txt',
               outfile='out/bootstrap_implication.txt',
               param_file='./data/wold/parameters.csv'):
@@ -148,50 +155,46 @@ def prefilter(axis, threshold_npmi=0, threshold_impl=0,
                     entry2 = entry_dict[(y, x)]
                 except KeyError:
                     entry1.add_direction('>')
-                    entries_dir.append((x, '>', y,
-                                        entry1.intersection,
-                                        entry1.x_field, entry1.y_field))
+                    entries_dir.append(entry1)
                     added.add((x, y))
                     continue
-                multiplier = 1.5
                 directionality = entry1.zn / entry2.zn
-                if directionality > multiplier:
+                if directionality > impl_dir_multiplier:
                     entry1.add_direction('>')
-                    entries_dir.append((x, '>', y,
-                                        entry1.intersection,
-                                        entry1.x_field, entry1.y_field))
+                    entries_dir.append(entry1)
                     added.add((x, y))
-                elif 1 / multiplier > directionality:
-                    entry1.add_direction('<')
-                    entries_dir.append((y, '>', x,
-                                        entry1.intersection,
-                                        entry1.y_field, entry1.x_field))
+                    added.add((y, x))
+                elif 1 / impl_dir_multiplier > directionality:
+                    entry2.add_direction('>')
+                    entries_dir.append(entry2)
+                    added.add((x, y))
                     added.add((y, x))
                 else:
                     entry1.add_direction('<>')
-                    del entry2
-                    entries_dir.append((x, '<>', y,
-                                        entry1.intersection,
-                                        entry1.x_field, entry1.y_field))
+                    entries_dir.append(entry1)
                     added.add((x, y))
                     added.add((y, x))
-        entries_dir.sort(key=lambda x: (x[4] == x[5], x[4], x[3]),
+        entries_dir.sort(key=lambda x: (x.x_field == x.y_field,
+                                        x.x_field, x.intersection),
                          reverse=True)
     if outfile:
         with open(outfile, 'w', encoding='utf8') as f:
-            f.write("# {} RESULTS (THRESHOLD IMPL: {}, THRESHOLD NPMI: {})\n".format(len(entries),
-                                                               threshold_impl, threshold_npmi))
+            f.write("# {} RESULTS (THRESHOLD IMPL: {}, THRESHOLD NPMI: {})\n"
+                    .format(len(entries), threshold_impl, threshold_npmi))
             f.write("X\tDIR\tY\tSEM_FIELD_X\tSEM_FIELD_Y\tINTERSECTION\n")
             for entry in entries_dir:
-                f.write("{}\t{}\t{}\t{:.1f}\t{}\t{}\n".format(*entry))
+                f.write("{}\t{}\t{}\t{:.1f}\t{}\t{}\n"
+                        .format(entry.x, entry.direction, entry.y,
+                                entry.intersection, entry.x_field,
+                                entry.y_field))
     return entries
 
 
 def run(axis, sem_net, wold2clics, threshold_impl=0, threshold_npmi=0,
         threshold_min=40, threshold_max=101):
     entries = prefilter(outfile=None, axis=axis,
-                     threshold_npmi=threshold_npmi,
-                     threshold_impl=threshold_impl)
+                        threshold_npmi=threshold_npmi,
+                        threshold_impl=threshold_impl)
     thresholds_sim, thresholds_size, sims, sizes = [], [], [], []
     print('threshold\tmean similarity\tconcept pairs')
     for threshold in range(threshold_min, threshold_max, 1):
@@ -252,3 +255,5 @@ def run(axis, sem_net, wold2clics, threshold_impl=0, threshold_npmi=0,
 # run("IMPL", sem_net, wold2clics, threshold_npmi=0.5)
 # entries = prefilter(threshold_impl=0.81, threshold_npmi=0.5, axis="IMPL",
 #                     outfile='out/bootstrap_implication_81_50.txt')
+# entries = prefilter(threshold_impl=0.81, threshold_npmi=0.5, axis="IMPL",
+                    # outfile=None)
