@@ -14,14 +14,14 @@ DOT_FILE = 'out/loanwords-{}-{}.dot'.format(IMPL_THRESHOLD, NPMI_THRESHOLD)
 NPMI_THRESHOLD /= 100
 IMPL_THRESHOLD /= 100
 
-entries_filtered = prefilter(axis="IMPL", threshold_npmi=NPMI_THRESHOLD,
+entries_filtered = prefilter(threshold_npmi=NPMI_THRESHOLD,
                              threshold_impl=IMPL_THRESHOLD,
                              threshold_intersection=N_LANG_THRESHOLD,
                              impl_dir_multiplier=DIRECTION_RATIO_THRESHOLD,
                              outfile=None, implication_direction=True)
 for entry in entries_filtered:
     print(entry.impl_str())
-entries_all = prefilter(axis="IMPL", threshold_npmi=-1, threshold_impl=-1,
+entries_all = prefilter(threshold_npmi=-1, threshold_impl=-1,
                         threshold_intersection=N_LANG_THRESHOLD, outfile=None)
 concept2field = get_id2string('./data/wold/parameters.csv', key_idx=1,
                               val_idx=3)

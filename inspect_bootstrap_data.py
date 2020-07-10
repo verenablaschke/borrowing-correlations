@@ -2,6 +2,7 @@ from loanwords import *
 import semantic_net
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 from matplotlib.ticker import ScalarFormatter
 
 
@@ -62,13 +63,11 @@ def concept_translations(verbose=False):
     return wold2clics
 
 
-def prune(threshold, entries, semantic_net, wold2clics, axis, verbose=False):
-    pruned_entries = set()
+def similarity_size(entries, semantic_net, wold2clics,
+                    threshold=0, axis="IMPL",
+                    verbose=False):
+    converted = set()
     for i, entry in enumerate(entries):
-        if axis == 'IMPL' and entry.zn < threshold:
-            continue
-        if axis == 'PMI' and entry.npmi_zn < threshold:
-            continue
         try:
             concept1 = wold2clics[entry.x]
         except KeyError:
@@ -79,11 +78,11 @@ def prune(threshold, entries, semantic_net, wold2clics, axis, verbose=False):
         except KeyError:
             print("No CLICS entry for {}".format(entry.y))
             concept2 = entry.y
-        pruned_entries.add((concept1, concept2))
+        converted.add((concept1, concept2))
     if verbose:
-        print(threshold, '\t', len(pruned_entries))
+        print(threshold, '\t', len(converted))
     similarity = 0
-    for entry in pruned_entries:
+    for entry in converted:
         try:
             similarity += (1 / semantic_net[(entry[0], entry[1])])
         except KeyError:
@@ -99,15 +98,15 @@ def prune(threshold, entries, semantic_net, wold2clics, axis, verbose=False):
                 print('ZeroDivisionError:', entry)
             similarity += 1
     mean_sim = 0
-    if len(pruned_entries) > 0:
-        mean_sim = similarity / len(pruned_entries)
+    if len(converted) > 0:
+        mean_sim = similarity / len(converted)
     if verbose:
-        print(similarity, len(pruned_entries))
+        print(similarity, len(converted))
         print(mean_sim)
-    return mean_sim, len(pruned_entries)
+    return mean_sim, len(converted)
 
 
-def prefilter(axis, threshold_npmi=0, threshold_impl=0,
+def prefilter(threshold_npmi=0, threshold_impl=0,
               threshold_intersection=3, implication_direction=False,
               impl_dir_multiplier=1.5,
               infile='out/bootstrap.txt',
@@ -183,23 +182,23 @@ def prefilter(axis, threshold_npmi=0, threshold_impl=0,
                     .format(len(entries), threshold_impl, threshold_npmi))
             f.write("X\tDIR\tY\tSEM_FIELD_X\tSEM_FIELD_Y\tINTERSECTION\n")
             for entry in entries_dir:
-                f.write("{}\t{}\t{}\t{:.1f}\t{}\t{}\n"
+                f.write("{}\t{}\t{}\t{:.1f}\t{}\t{}\t{:.2f}\t{:.2f}\n"
                         .format(entry.x, entry.direction, entry.y,
                                 entry.intersection, entry.x_field,
-                                entry.y_field))
+                                entry.y_field, entry.zn, entry.npmi_zn))
     return entries
 
 
 def run(axis, sem_net, wold2clics, threshold_impl=0, threshold_npmi=0,
         threshold_min=40, threshold_max=101):
-    entries = prefilter(outfile=None, axis=axis,
+    entries = prefilter(outfile=None,
                         threshold_npmi=threshold_npmi,
                         threshold_impl=threshold_impl)
     thresholds_sim, thresholds_size, sims, sizes = [], [], [], []
     print('threshold\tmean similarity\tconcept pairs')
     for threshold in range(threshold_min, threshold_max, 1):
         threshold /= 100
-        sim, size = prune(threshold, entries, sem_net, wold2clics, axis)
+        sim, size = similarity_size(entries, sem_net, wold2clics, threshold, axis)
         thresholds_size.append(threshold)
         sizes.append(size)
         if size > 0:
@@ -250,10 +249,74 @@ def run(axis, sem_net, wold2clics, threshold_impl=0, threshold_npmi=0,
     plt.show()
 
 
-# sem_net = semantic_net.get_dist_network(max_dist=3)
-# wold2clics = concept_translations()
-# run("IMPL", sem_net, wold2clics, threshold_npmi=0.5)
-# entries = prefilter(threshold_impl=0.81, threshold_npmi=0.5, axis="IMPL",
-#                     outfile='out/bootstrap_implication_81_50.txt')
-# entries = prefilter(threshold_impl=0.81, threshold_npmi=0.5, axis="IMPL",
-                    # outfile=None)
+def heatmap(impl_min=90, impl_max=59, impl_step=-3,
+            npmi_min=45, npmi_max=91, npmi_step=5):
+    sem_net = semantic_net.get_dist_network(max_dist=3)
+    wold2clics = concept_translations()
+    sizes_all = []
+    sims_all = []
+    for impl in range(impl_min, impl_max, impl_step):
+        sizes_impl = []
+        sims_impl = []
+        impl /= 100
+        for npmi in range(npmi_min, npmi_max, npmi_step):
+            npmi /= 100
+            entries = prefilter(outfile=None, threshold_npmi=npmi,
+                                threshold_impl=impl)
+            sim, size = similarity_size(entries, sem_net, wold2clics)
+            sizes_impl.append(size)
+            sims_impl.append(sim)
+        sizes_all.append(sizes_impl)
+        sims_all.append(sims_impl)
+
+    fig, axes = plt.subplots(ncols=2)
+    ax1, ax2 = axes
+
+    sims_all = np.array(sims_all)
+    print(sims_all)
+    im = ax1.imshow(sims_all, cmap=cm.YlGn)
+    ax1.set_xticks(np.arange(sims_all.shape[1]))
+    ax1.set_yticks(np.arange(sims_all.shape[0]))
+    ax1.set_xticklabels(np.arange(npmi_min, npmi_max, npmi_step))
+    ax1.set_yticklabels(np.arange(impl_min, impl_max, impl_step))
+    ax1.set_xlabel("NPMI")
+    ax1.set_ylabel("Implication strength")
+    ax1.set_title("Average intra-pair similarity")
+    plt.setp(ax1.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    for i in range(sims_all.shape[0]):
+        for j in range(sims_all.shape[1]):
+            val = sims_all[i, j]
+            text = ax1.text(j, i, '{:.2f}'.format(val),
+                            ha="center", va="center",
+                            color="w" if val > 0.25 else "slategray")
+
+    sizes_all = np.array(sizes_all)
+    print(sizes_all)
+    im = ax2.imshow(sizes_all, cmap=cm.YlGn)
+    ax2.set_xticks(np.arange(sizes_all.shape[1]))
+    ax2.set_yticks(np.arange(sizes_all.shape[0]))
+    ax2.set_xticklabels(np.arange(npmi_min, npmi_max, npmi_step))
+    ax2.set_yticklabels(np.arange(impl_min, impl_max, impl_step))
+    ax2.set_xlabel("NPMI")
+    ax2.set_ylabel("Implication strength")
+    ax2.set_title("Number of concept pairs")
+    plt.setp(ax2.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    for i in range(sizes_all.shape[0]):
+        for j in range(sizes_all.shape[1]):
+            val = sizes_all[i, j]
+            text = ax2.text(j, i, val,
+                            ha="center", va="center",
+                            color="w" if val > 125 else "slategray")
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == '__main__':
+    sem_net = semantic_net.get_dist_network(max_dist=3)
+    wold2clics = concept_translations()
+    run("IMPL", sem_net, wold2clics, threshold_npmi=0.5)
+    entries = prefilter(threshold_impl=0.81, threshold_npmi=0.5,
+                        outfile='out/bootstrap_implication_81_50.txt')
+    heatmap()
