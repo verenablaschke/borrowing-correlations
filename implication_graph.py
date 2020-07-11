@@ -1,10 +1,10 @@
-# dot -Tsvg out\loanwords-81-50.dot -o out\loanwords-81-50.svg && out\loanwords-81-50.svg
+# dot -Tsvg out\loanwords-80-60.dot -o out\loanwords-80-60.svg && out\loanwords-80-60.svg
 from loanwords import *
 from inspect_bootstrap_data import *
 
 ### CONFIG ###
-NPMI_THRESHOLD = 50  # in %
-IMPL_THRESHOLD = 81  # in %
+NPMI_THRESHOLD = 60  # in %
+IMPL_THRESHOLD = 80  # in %
 DIRECTION_RATIO_THRESHOLD = 1.5
 N_LANG_THRESHOLD = 3
 ##############
@@ -14,15 +14,13 @@ DOT_FILE = 'out/loanwords-{}-{}.dot'.format(IMPL_THRESHOLD, NPMI_THRESHOLD)
 NPMI_THRESHOLD /= 100
 IMPL_THRESHOLD /= 100
 
-entries_filtered = prefilter(threshold_npmi=NPMI_THRESHOLD,
-                             threshold_impl=IMPL_THRESHOLD,
-                             threshold_intersection=N_LANG_THRESHOLD,
-                             impl_dir_multiplier=DIRECTION_RATIO_THRESHOLD,
-                             outfile=None, implication_direction=True)
-for entry in entries_filtered:
-    print(entry.impl_str())
-entries_all = prefilter(threshold_npmi=-1, threshold_impl=-1,
-                        threshold_intersection=N_LANG_THRESHOLD, outfile=None)
+entries_filtered = filter(threshold_npmi=NPMI_THRESHOLD,
+                          threshold_impl=IMPL_THRESHOLD,
+                          threshold_borrow_x=N_LANG_THRESHOLD,
+                          impl_dir_multiplier=DIRECTION_RATIO_THRESHOLD,
+                          outfile=None, implication_direction=True)
+entries_all = filter(threshold_npmi=-1, threshold_impl=-1,
+                     threshold_borrow_x=N_LANG_THRESHOLD, outfile=None)
 concept2field = get_id2string('./data/wold/parameters.csv', key_idx=1,
                               val_idx=3)
 
