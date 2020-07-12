@@ -156,25 +156,32 @@ def filter(threshold_npmi=0, threshold_impl=0,
                     entries_dir.append(entry1)
                     added.add((x, y))
                     continue
-                directionality = entry1.impl / entry2.impl
-                if directionality > impl_dir_multiplier:
-                    entry1.add_direction('>')
-                    entries_dir.append(entry1)
-                    added.add((x, y))
-                    added.add((y, x))
-                elif 1 / impl_dir_multiplier > directionality:
-                    entry2.add_direction('>')
+                entry1.add_direction('<>')
+                added.add((x, y))
+                added.add((y, x))
+                entries_dir.append(entry1)
+                if include_duplicate_bidi:
+                    entry2.add_direction('<>')
                     entries_dir.append(entry2)
-                    added.add((x, y))
-                    added.add((y, x))
-                else:
-                    entry1.add_direction('<>')
-                    entries_dir.append(entry1)
-                    if include_duplicate_bidi:
-                        entry2.add_direction('<>')
-                        entries_dir.append(entry2)
-                    added.add((x, y))
-                    added.add((y, x))
+                # directionality = entry1.impl / entry2.impl
+                # if directionality > impl_dir_multiplier:
+                #     entry1.add_direction('>')
+                #     entries_dir.append(entry1)
+                #     added.add((x, y))
+                #     added.add((y, x))
+                # elif 1 / impl_dir_multiplier > directionality:
+                #     entry2.add_direction('>')
+                #     entries_dir.append(entry2)
+                #     added.add((x, y))
+                #     added.add((y, x))
+                # else:
+                #     entry1.add_direction('<>')
+                #     entries_dir.append(entry1)
+                #     if include_duplicate_bidi:
+                #         entry2.add_direction('<>')
+                #         entries_dir.append(entry2)
+                #     added.add((x, y))
+                #     added.add((y, x))
         entries_dir.sort(key=lambda x: (x.x_field == x.y_field,
                                         x.x_field, x.y_field,
                                         x.impl, x.borrow_x),
