@@ -330,11 +330,33 @@ def heatmap(impl_min=60, impl_max=96, impl_step=5,
     plt.show()
 
 
+def similarity_by_field_match(threshold_npmi, threshold_impl):
+    sem_net = semantic_net.get_dist_network(max_dist=3)
+    wold2clics = concept_translations()
+    entries = filter(outfile=None,
+                     threshold_npmi=threshold_npmi,
+                     threshold_impl=threshold_impl)
+    entries_shared_field = []
+    entries_mixed_fields = []
+    for e in entries:
+        if e.x_field == e.y_field:
+            entries_shared_field.append(e)
+        else:
+            entries_mixed_fields.append(e)
+    print("SAME FIELD")
+    print(similarity_size(entries_shared_field, sem_net, wold2clics))
+    print("MIXED FIELDS")
+    print(similarity_size(entries_mixed_fields, sem_net, wold2clics))
+
+
 if __name__ == '__main__':
-    # sem_net = semantic_net.get_dist_network(max_dist=3)
-    # wold2clics = concept_translations()
-    # search_threshold("IMPL", sem_net, wold2clics, threshold_npmi=0.5)
-    heatmap()
+    # # search_threshold("IMPL", semantic_net.get_dist_network(max_dist=3)
+    # #                  concept_translations(), threshold_npmi=0.5)
+
+    # heatmap()
+    
     entries = filter(threshold_impl=0.8, threshold_npmi=0.6,
                      include_duplicate_bidi=True,
                      outfile='out/bootstrap_implication_80_60.txt')
+
+    # similarity_by_field_match(0.6, 0.8)
