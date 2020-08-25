@@ -19,7 +19,7 @@ Create the graph that shows pairs of loanwords that tend to be borrowed together
 python implication_graph.py
 dot -Tsvg out\loanwords-80-60.dot -o out\loanwords-80-60.svg
 ```
-(80% and 60% are the NPMI and implication strength thresholds, respectively.
+(80% and 60% are the implication strength and NPMI thresholds, respectively.
 Change the configuration section within the Python script to change the thresholds.)
 
 
