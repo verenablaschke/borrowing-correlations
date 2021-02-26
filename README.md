@@ -1,6 +1,9 @@
-# Cross-Linguistic Implicational Loanword Patterns
+# Correlating borrowing events across concepts to derive a data-driven source of evidence for loanword etymologies
+(Verena Blaschke & Johannes Dellert)
 
 Given that a target language A borrowed a word for concept C from a donor language B, which other words did A probably borrow from B?
+
+Talk given at the *Model and evidence in quantitative comparative linguistics* workshop at the 43rd annual conference of the German Linguistic Society (DGfS) (Feb 26, 2021). \[[Abstract](https://www.linguistik.uni-freiburg.de/dgfs-jahrestagung-2021/programm/arbeitsgruppen-programm#page=268)\] \[Slides to come.\]
 
 ## Running the code
 
