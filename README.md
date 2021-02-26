@@ -3,7 +3,7 @@
 
 Given that a target language A borrowed a word for concept C from a donor language B, which other words did A probably borrow from B?
 
-Talk given at the *Model and evidence in quantitative comparative linguistics* workshop at the 43rd annual conference of the German Linguistic Society (DGfS) (Feb 26, 2021). \[[Abstract](https://www.linguistik.uni-freiburg.de/dgfs-jahrestagung-2021/programm/arbeitsgruppen-programm#page=268)\] \[Slides to come.\]
+Talk given at the [Model and evidence in quantitative comparative linguistics](https://www.sfs.uni-tuebingen.de/~gjaeger/maeiqcl21/) workshop at the 43rd annual conference of the German Linguistic Society (DGfS) (Feb 26, 2021). \[[Abstract](https://www.linguistik.uni-freiburg.de/dgfs-jahrestagung-2021/programm/arbeitsgruppen-programm#page=268)\] \[[Slides](https://github.com/verenablaschke/borrowing-correlations/tree/master/docs/20210226-maeiqcl-vblaschke-jdellert.pdf)\]
 
 ## Running the code
 
